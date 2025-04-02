@@ -2,11 +2,13 @@ package modelo;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 
 public class GestorArchivos {
@@ -16,18 +18,23 @@ public class GestorArchivos {
     private Gson gson = new Gson();
 
     public List<Cliente> leerClientes() throws IOException {
-        FileReader reader = new FileReader(CLIENTES_FILE);
-        Type listType = new TypeToken<List<Cliente>>() {}.getType();
-        List<Cliente> clientes = gson.fromJson(reader, listType);
-        reader.close();
-        return clientes;
+        File file = new File(CLIENTES_FILE);
+        if (!file.exists()) {
+            return new ArrayList<>();
+        }
+        
+        try (FileReader reader = new FileReader(CLIENTES_FILE)) {
+            Type listType = new TypeToken<List<Cliente>>() {}.getType();
+            List<Cliente> clientes = gson.fromJson(reader, listType);
+            return clientes != null ? clientes : new ArrayList<>();
+        }
     }
 
     // Guardar
     public void guardarClientes(List<Cliente> clientes) throws IOException {
-        FileWriter writer = new FileWriter(CLIENTES_FILE);
-        gson.toJson(clientes, writer);
-        writer.close();
+        try (FileWriter writer = new FileWriter(CLIENTES_FILE)) {
+            gson.toJson(clientes, writer);
+        }
     }
 
     // Método para consultar todos los clientes
@@ -35,32 +42,55 @@ public class GestorArchivos {
         try (Reader reader = new FileReader(CLIENTES_FILE)) {
             Type listType = new TypeToken<List<Cliente>>() {}.getType();
             List<Cliente> lista = gson.fromJson(reader, listType);
-            //return lista != null ? lista : new ArrayList<>();
-            return lista;
+            return lista != null ? lista : new ArrayList<>();
         } catch (IOException e) {
             e.printStackTrace();
+            return new ArrayList<>();
         }
-
-        return null;
     }
 
-    public void modificarClientes(Cliente clienteModificado, List<Cliente> clientes) {
+    public void modificarCliente(Cliente clienteModificado) throws IOException {
+        List<Cliente> clientes = leerClientes();
+        boolean encontrado = false;
+        
         for (int i = 0; i < clientes.size(); i++) {
             if (clientes.get(i).getNid().equals(clienteModificado.getNid())) {
                 clientes.set(i, clienteModificado);
+                encontrado = true;
                 break;
             }
         }
-        //guardarClientes();
+        
+        if (encontrado) {
+            guardarClientes(clientes);
+        }
+    }
+    
+    public boolean eliminarCliente(String nid) throws IOException {
+        List<Cliente> clientes = leerClientes();
+        boolean eliminado = false;
+        
+        for (int i = 0; i < clientes.size(); i++) {
+            if (clientes.get(i).getNid().equals(nid)) {
+                clientes.remove(i);
+                eliminado = true;
+                break;
+            }
+        }
+        
+        if (eliminado) {
+            guardarClientes(clientes);
+        }
+        
+        return eliminado;
     }
 
     public List<Usuario> leerUsuarios() throws IOException {
         FileReader reader = new FileReader(USUARIOS_FILE);
-        Type listType = new TypeToken<List<Usuario>>() {
-        }.getType();
+        Type listType = new TypeToken<List<Usuario>>() {}.getType();
         List<Usuario> usuarios = gson.fromJson(reader, listType);
         reader.close();
-        return usuarios;
+        return usuarios != null ? usuarios : new ArrayList<>();
     }
 
     public void guardarUsuarios(List<Usuario> usuarios) throws IOException {
